@@ -6,22 +6,53 @@ using System;
 
 /**
  * This code automatically sets up an object pool of the instances you attach it to.
- * Usually, Destroy is an expensive operation with processing overhead. Recycling objects
- * in a pool keeps memory use consistent and won't slam the GC with loads of work.
+ * Usually, Destroy() is an expensive operation with heavy processing overhead. Recycling
+ * objects in a pool keeps memory use consistent and won't slam the GC with loads of work.
  *
- * Creating:
+ * Creating
+ * --------
  * When you want a new object, ask the Pool if one is available, and if so,
- * retrieve it. This object will have its Start method called automatically.
- * Logically, not all objects can be pooled, and you'll need to make sure Start
- * can handle setting up the object.
+ * retrieve it. If the pool is empty, you must make a new instance.
+ * 
+ *  GameObject obj;
  *
- * Destroying:
+ *  if (Pool.InstanceAvailable(objectType))
+ *      obj = Pool.GetInstance(objectType);
+ *  else
+ *      obj = Instantiate(prefab);
+ *
+ * The object and its children will have their Start methods called automatically.
+ * You'll need to make sure Start can handle setting up the object properly. Use Awake
+ * to set up any permenant values or perform any expensive functions you only need to do
+ * once.
+ *
+ * Destroying
+ * ----------
  * Instead of destroying the object, call Pool.PoolObject(gameObject) on it. The PrePool
  * method will be called on all children, followed by deactivation.
  *
- * On Start:
- * Don't forget to call Pool.Clear() at the start of your scene if you have destroyed pooled
- * instances. This happens by default when Unity restarts a scene.
+ *  void PrePool()
+ *  {
+ *      // Do whatever cleanup needs to be done.
+ *  }
+ *
+ * On Scene Start
+ * --------------
+ * The pools are static, and will persist between Scenes, so don't forget to call Pool.Clear() at the
+ * start of your scene if you have destroyed any pooled instances. This happens by default when Unity
+ * closes a scene. If you get a warning when you try to GetInstance, this is likely the culprit.
+ *
+ * Working With Pooling
+ * --------------------
+ * You can warm up the object pools by creating and then pooling all of the objects you will need
+ * at the start of each scene. Instantiate is expensive, so doing it only at the beginning of the
+ * Scene is a very good idea.
+ *
+ * Due to the way Unity collisions work, you might sometimes collide with an object that has been
+ * pooled already. If this happens, you might want to check and see if a object is active before
+ * doing work on it. To check if an object is active and unpooled, use the activeSelf variable
+ * inside GameObjects to see if they are active. This will happen most when you are using
+ * CollisionStay. For most use, it will not be an issue.
  *
  * -Eric
  */
