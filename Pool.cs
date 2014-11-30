@@ -6,7 +6,7 @@ using System;
 
 /**
  * This code automatically sets up an object pool of the instances you attach it to.
- * Usually, Destroy is an expensive operation with memory overhead. Recycling objects
+ * Usually, Destroy is an expensive operation with processing overhead. Recycling objects
  * in a pool keeps memory use consistent and won't slam the GC with loads of work.
  *
  * Creating:
