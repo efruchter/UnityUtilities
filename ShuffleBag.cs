@@ -3,9 +3,11 @@ using System.Collections.Generic;
 
 /*
  * Generic version of: http://gamedevelopment.tutsplus.com/tutorials/shuffle-bags-making-random-feel-more-random--gamedev-1249
- *
- * A random generator that guarantees events occur with a controllable amount.
- * It's a good idea to make sure that improbable events actually happen from time to time.
+ * 
+ * With usual random dice rolling, an event might never occur if the RNG is
+ * being antagonistic. A shuffle-bag randomizes the order in which a set number of events
+ * occur, but still ensures that they all eventually get picked each cycle. Dice rolls, but
+ * more "fun" for games.
  *
  * -Eric
  */
