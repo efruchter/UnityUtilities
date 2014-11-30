@@ -4,11 +4,18 @@ using System.Collections;
 using Pathfinding;
 using Utility;
 
+/**
+ * Pathfinding for a gridworld. Has an A* routine as well as a FlowGraph.
+ * Links can only be in 4 cardinal directions. Supports only a single global
+ * grid.
+ 
+ * -Eric
+ */
 namespace Pathfinding
 {
 	public class LinkDirection
 	{
-		public const int UP = 0,DOWN = 1, LEFT = 2, RIGHT = 3;
+		public const int UP = 0, DOWN = 1, LEFT = 2, RIGHT = 3;
 	}
 
 	public class SearchNode
@@ -88,18 +95,30 @@ namespace Pathfinding
 
 	public class Search
 	{
+		// FlowGraph
 		private static SearchNode[,] latestGraph;
 		private static int[,] flowGraph;
+		
+		// Single pathable graph
+		private static bool[,] explored;
+		private static bool[,] open;
+		private static int[,] distance;
+		private static SearchNode[,] parents;
 
 		public static int getFlowNumber(int x, int y)
 		{
 			return flowGraph [x, y];
 		}
 
-		public static void InitializeGraph()
+		public static void InitializeGraph(int xTiles, int yTiles)
 		{
+			explored = new bool[xTiles, yTiles];
+			open = new bool[xTiles, yTiles];
+			distance = new int[xTiles, yTiles];
+			parents = new SearchNode[xTiles, yTiles];
+			
 			bool[,] tiles = WallBuilder.GetTiles ();
-			int w = tiles.GetLength (0), h = tiles.GetLength (1);
+			int w = xTiles, h = yTiles;
 
 			latestGraph = new SearchNode[w, h];
 			flowGraph = new int[w, h];
@@ -133,10 +152,7 @@ namespace Pathfinding
 			}
 		}
 
-		private static int expandedCount = 0;
-		private const int FLOWPATH_PER_FRAME = 10;
-
-		public static IEnumerator UpdateFlowGraph (int goalX, int goalY)
+		public static IEnumerator UpdateFlowGraph (int goalX, int goalY, int exploreCountPerFrame=10)
 		{
 			LinkedList<SearchNode> frontier = new LinkedList<SearchNode>();
 			Dictionary<SearchNode, SearchNode> open = new Dictionary<SearchNode, SearchNode>();
@@ -145,6 +161,8 @@ namespace Pathfinding
 			open.Add(latestGraph [goalX, goalY], latestGraph [goalX, goalY]);
 			frontier.AddLast(latestGraph [goalX, goalY]);
 			flowGraph[goalX, goalY] = 0;
+			
+			int expandedCount = 0;
 
 			while (frontier.Count > 0)
 			{
@@ -164,7 +182,7 @@ namespace Pathfinding
 					frontier.AddLast (node);
 				}
 
-				if ((expandedCount += 1) >= FLOWPATH_PER_FRAME)
+				if ((expandedCount += 1) >= exploreCountPerFrame)
 				{
 					expandedCount = 0;
 					yield return null;
@@ -206,15 +224,8 @@ namespace Pathfinding
 			}
 		}
 
-		private static bool[,] explored = new bool[51, 51];
-		private static bool[,] open = new bool[51, 51];
-		private static int[,] distance = new int[51, 51];
-		private static SearchNode[,] parents = new SearchNode[51, 51];
-
-		public static LinkedList<SearchNode> PathFindAStar(int[] startArr, int[] endArr)
+		public static LinkedList<SearchNode> PathFindAStar(int[] startArr, int[] endArr, int expandLimit=200)
 		{
-			int expandLimit = 200;
-
 			bool[,] tiles = WallBuilder.GetTiles ();
 
 			if (tiles [startArr [0], startArr [1]] || tiles [endArr [0], endArr [1]])
