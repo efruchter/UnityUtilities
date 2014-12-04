@@ -1,5 +1,5 @@
 Shader "Blend 2 Textures, Simply Lit" { 
- 
+// http://wiki.unity3d.com/index.php/Blend_2_Textures
 Properties {
 	_Color ("Color", Color) = (1,1,1)
 	_Blend ("Blend", Range (0,1)) = 0.5 
