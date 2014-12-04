@@ -22,9 +22,9 @@ public class ShuffleBag<T>
 	private int Capacity { get { return data.Capacity; } }
 	public int Size { get { return data.Count; } }
 	
-	public ShuffleBag(int initialCapacity)
+	public ShuffleBag()
 	{
-		data = new List<T>(initialCapacity);
+		data = new List<T>();
 	}
 	
 	/**
