@@ -3,7 +3,6 @@ using System.Text;
 using System.Collections.Generic;
 using System;
 
-
 /**
  * This code automatically sets up an object pool of the instances you attach it to.
  * Usually, Destroy() is an expensive operation with heavy processing overhead. Recycling
@@ -25,6 +24,10 @@ using System;
  * You'll need to make sure Start can handle setting up the object properly. Use Awake
  * to set up any permenant values or perform any expensive functions you only need to do
  * once.
+ * 
+ * Another option is to pass in a lambda function to be called if no pooled instance exists:
+ * 
+ * Pool.GetInstance("blast", () => (GameObject) Instantiate(blastPrefab));
  *
  * Destroying
  * ----------
@@ -63,6 +66,8 @@ public class Pool : MonoBehaviour
 	
 	private static Dictionary<string, LinkedList<GameObject>> pools;
 	
+	public delegate GameObject CreateInstance();
+	
 	static Pool()
 	{
 		pools = new Dictionary<string, LinkedList<GameObject>>();
@@ -96,6 +101,17 @@ public class Pool : MonoBehaviour
 	public static bool InstanceAvailable(string poolType)
 	{
 		return pools.ContainsKey(poolType) && pools[poolType].Count > 0;
+	}
+	
+	/**
+	 * Get a pooled instance. Will be activated. If not found, call delegate.
+	 */
+	public static GameObject GetInstance(string poolType, CreateInstance instanceFunction)
+	{
+		if (Pool.InstanceAvailable(poolType))
+			return GetInstance(poolType, Vector3.zero);
+		else
+			return instanceFunction();
 	}
 	
 	/**
