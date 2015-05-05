@@ -1,7 +1,7 @@
 *.DS_Store
 /Library
-Assembly-CSharp-vs.csproj
+Assembly-CSharp*-vs.csproj
 *.sln
-Assembly-CSharp.csproj
+Assembly-CSharp*.csproj
 *.userprefs
 *-csharp.sln
