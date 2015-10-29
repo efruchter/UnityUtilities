@@ -4,7 +4,7 @@ using System;
 /**
  * A 1st order probabalistic model that can be used to model complex behaviours for A.I. or other processes.
  * 
- * Designed to use minimal space and perform fast lookups.
+ * Built for fast lookups, will store a pair of int/float entries for (states)^2.
  * Built for fast Transitions O(log2(states)). Preparing the probabilities is O(n).
  * 
  * After setting the states, don't forget to Prepare().
@@ -24,7 +24,7 @@ public class ProbabilityStateModel {
 	 * startState: The starting state.
 	 * randomPositiveUnitNumberSource: Function that generates a random float in the range [0, ..., 1];
 	 */
-	public ProbabilityStateModel ( int uniqueStateCount, int startState, System.Func<float> randomPositiveUnitNumberSource) {
+	public ProbabilityStateModel( int uniqueStateCount, int startState, System.Func<float> randomPositiveUnitNumberSource) {
 		currentState = startState;
 		STATE_COUNT = uniqueStateCount;
 		randomNumberSource = randomPositiveUnitNumberSource;
@@ -42,9 +42,13 @@ public class ProbabilityStateModel {
 		}
 	}
 
+	/**
+	 * Convert the model into a binary-searchable model for fast lookups.
+	 * Running this will allow Transitions.
+	 */
 	public void Prepare() {
 		if ( validated ) {
-			throw new Exception ( "Model has already been prepared." );
+			throw new Exception( "Model has already been prepared." );
 		}
 
 		for ( int i = 0; i < STATE_COUNT; i++ ) {
@@ -79,10 +83,19 @@ public class ProbabilityStateModel {
 		return currentState;
 	}
 
+	/**
+	 * Set the transition probability. Cannot be negative.
+	 * Values will be normalized later, so the value scale is not important.
+	 */
 	public void SetTransitionProbability( int fromState, int toState, float prob ) {
 		if ( validated ) {
 			throw new Exception ( "Cannot set probabilityies after calling Prepare()." );
 		}
+
+		if ( prob < 0 ) {
+			throw new Exception ( "Probability cannot be negative." );
+		}
+
 
 		binarySearchPModel[ fromState ][ toState ] = new WeightedRegion () {
 			upperRegionValue = prob,
