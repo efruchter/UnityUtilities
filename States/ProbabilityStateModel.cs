@@ -4,19 +4,16 @@ using System;
 /**
  * A 1st order probabalistic model that can be used to model complex behaviours for A.I. or other processes.
  * 
- * Built for fast lookups, will store a pair of int/float entries for (states)^2.
+ * Built for fast lookups, stores states^2 floats.
  * Built for fast Transitions O(log2(states)). Preparing the probabilities is O(n).
  * 
  * After setting the states, don't forget to Prepare().
  * -Eric
  */
 public class ProbabilityStateModel {
-	public int currentState;
-
+	public readonly int STATE_COUNT;
 	readonly float[][] binarySearchPModel;
 	bool validated;
-	readonly int STATE_COUNT;
-	readonly System.Func<float> randomNumberSource;
 
 	/**
 	 * Create a probability model
@@ -24,10 +21,8 @@ public class ProbabilityStateModel {
 	 * startState: The starting state.
 	 * randomPositiveUnitNumberSource: Function that generates a random float in the range [0, ..., 1];
 	 */
-	public ProbabilityStateModel( int uniqueStateCount, int startState, System.Func<float> randomPositiveUnitNumberSource) {
-		currentState = startState;
+	public ProbabilityStateModel ( int uniqueStateCount ) {
 		STATE_COUNT = uniqueStateCount;
-		randomNumberSource = randomPositiveUnitNumberSource;
 		validated = false;
 
 		binarySearchPModel = new float[ STATE_COUNT ][];
@@ -40,13 +35,13 @@ public class ProbabilityStateModel {
 	 * Convert the model into a binary-searchable model for fast lookups.
 	 * Running this will allow Transitions.
 	 */
-	public void Prepare() {
+	public void Prepare () {
 		if ( validated ) {
 			throw new Exception( "Model has already been prepared." );
 		}
 
 		for ( int i = 0; i < STATE_COUNT; i++ ) {
-			MakeRegionArraySearchable( binarySearchPModel[ i ] );
+			WeightedRandom.MakeWeightArraySearchable( binarySearchPModel[ i ] );
 		}
 
 		validated = true;
@@ -54,27 +49,14 @@ public class ProbabilityStateModel {
 
 	/**
 	 * Perform a probabilistic transition.
-	 * Return true if the state changed.
+	 * Return the new state.
 	 */
-	public bool Transition() {
+	public int Transition ( int currentState ) {
 		if ( !validated ) {
 			throw new Exception( "Please Prepare() model before using." );
 		}
 
-		var newState = BinarySearchRegionFromSample( binarySearchPModel[ currentState ], randomNumberSource() );
-
-		bool isNewState = ( newState != currentState );
-		currentState = newState;
-
-		return isNewState;
-	}
-
-	/**
-	 * Transition and return the current state.
-	 */
-	public int TransitionReturnState() {
-		Transition();
-		return currentState;
+		return WeightedRandom.BinarySearchWeightArrayFromSample( binarySearchPModel[ currentState ], UnityEngine.Random.value );
 	}
 
 	/**
@@ -101,32 +83,60 @@ public class ProbabilityStateModel {
 			return binarySearchPModel[ i ][ j ] - binarySearchPModel[ i ][ j - 1 ];
 		}
 	}
+}
+
+/**
+ * Build a weighted random data structure. Designed for fast sampling.
+ */
+public class WeightedRandom {
+	float[] stateWeights;
+
+	/**
+	 * Create the data structure.
+	 * stateWeights: the weight of each state.
+	 */
+	public WeightedRandom ( float[] stateWeights ) {
+		this.stateWeights = new float[ stateWeights.Length ];
+
+		for ( int i = 0; i < stateWeights.Length; i++ ) {
+			this.stateWeights[ i ] = stateWeights[ i ];
+		}
+
+		MakeWeightArraySearchable( this.stateWeights );
+	}
+
+	/**
+	 * Sample a state and return. Sampling is O( log2(n) ).
+	 */
+	public int Sample () {
+		return BinarySearchWeightArrayFromSample( this.stateWeights, UnityEngine.Random.value );
+	}
 
 	/**
 	 * Returns The region that a sample exists in. All regions are marked by their upper range.
 	 */
-	static int BinarySearchRegionFromSample( float[] A, float sample ) {
+	public static int BinarySearchWeightArrayFromSample ( float[] stateWeights, float sample ) {
 		int l = 0;
-		int h = A.Length - 1;
+		int h = stateWeights.Length - 1;
 		int m = ( h + l ) / 2;
 
 		while ( l <= h ) {
 			m = ( l + h ) / 2;
-			if ( ( sample <= A[ m ] ) && ( ( m == 0 ) || ( sample > A[ m - 1 ] ) ) ) {
+			if ( ( sample <= stateWeights[ m ] ) && ( ( m == 0 ) || ( sample > stateWeights[ m - 1 ] ) ) ) {
 				break;
-			} else if ( A[ m ] < sample ) {
+			} else if ( stateWeights[ m ] < sample ) {
 				l = m + 1;
 			} else {
 				h = m - 1;
 			}
 		}
 
-		if ( A[m] == A[0] ) {
+		if ( stateWeights[ m ] == stateWeights[ 0 ] ) {
 			return 0;
 		}
 
 		for ( int i = m; i > 0; i-- ) {
-			if ( A[i] != A[i - 1] ) {
+			if ( stateWeights[ i ] != stateWeights[ i - 1 ] ) {
 				return i;
 			}
 		}
@@ -134,7 +144,7 @@ public class ProbabilityStateModel {
 		return 0;
 	}
 
-	static void MakeRegionArraySearchable( float[] a ) {
+	public static void MakeWeightArraySearchable ( float[] a ) {
 		Normalize( a );
 
 		for ( int i = 1; i < a.Length; i++ ) {
@@ -142,7 +152,7 @@ public class ProbabilityStateModel {
 		}
 	}
 
-	static void Normalize( float[] a ) {
+	public static void Normalize ( float[] a ) {
 		float total = 0;
 
 		for ( int i = 0; i < a.Length; i++ ) {
@@ -154,7 +164,7 @@ public class ProbabilityStateModel {
 		}
 
 		for ( int i = 0; i < a.Length; i++ ) {
-			a [ i ] /= total;
+			a[ i ] /= total;
 		}
 	}
 }
