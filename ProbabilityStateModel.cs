@@ -13,7 +13,7 @@ using System;
 public class ProbabilityStateModel {
 	public int currentState;
 
-	readonly WeightedRegion[][] binarySearchPModel;
+	readonly float[][] binarySearchPModel;
 	bool validated;
 	readonly int STATE_COUNT;
 	readonly System.Func<float> randomNumberSource;
@@ -30,15 +30,9 @@ public class ProbabilityStateModel {
 		randomNumberSource = randomPositiveUnitNumberSource;
 		validated = false;
 
-		binarySearchPModel = new WeightedRegion[ uniqueStateCount ][];
+		binarySearchPModel = new float[ STATE_COUNT ][];
 		for ( int i = 0; i < STATE_COUNT; i++ ) {
-			binarySearchPModel[ i ] = new WeightedRegion[ uniqueStateCount ];
-		}
-
-		for ( int i = 0; i < STATE_COUNT; i++ ) {
-			for ( int j = 0; j < STATE_COUNT; j++ ) {
-				SetTransitionProbability( i, j, 0 );
-			}
+			binarySearchPModel[ i ] = new float[ STATE_COUNT ];
 		}
 	}
 
@@ -87,108 +81,80 @@ public class ProbabilityStateModel {
 	 * Set the transition probability. Cannot be negative.
 	 * Values will be normalized later, so the value scale is not important.
 	 */
-	public void SetTransitionProbability( int fromState, int toState, float prob ) {
-		if ( validated ) {
-			throw new Exception ( "Cannot set probabilityies after calling Prepare()." );
+	public float this[ int i, int j ] {
+		set {
+			if ( validated ) {
+				throw new Exception( "Cannot set probabilities after calling Prepare()." );
+			}
+
+			if ( value < 0 ) {
+				throw new Exception( "Probability cannot be negative." );
+			}
+
+			binarySearchPModel[ i ][ j ] = value;
 		}
+		get {
+			if ( j == 0 ) {
+				return binarySearchPModel[ i ][ j ];
+			}
 
-		if ( prob < 0 ) {
-			throw new Exception ( "Probability cannot be negative." );
+			return binarySearchPModel[ i ][ j ] - binarySearchPModel[ i ][ j - 1 ];
 		}
-
-
-		binarySearchPModel[ fromState ][ toState ] = new WeightedRegion () {
-			upperRegionValue = prob,
-			trueIndex = toState
-		};
 	}
 
 	/**
 	 * Returns The region that a sample exists in. All regions are marked by their upper range.
 	 */
-	static int BinarySearchRegionFromSample( WeightedRegion[] sortedA, float sample ) {
+	static int BinarySearchRegionFromSample( float[] A, float sample ) {
 		int l = 0;
-		int h = sortedA.Length - 1;
-		int m = ( l + h ) / 2;
-
-		if ( l == h ) {
-			return m;
-		}
+		int h = A.Length - 1;
+		int m = ( h + l ) / 2;
 
 		while ( l <= h ) {
-			if ( sample < sortedA[ m ].upperRegionValue ) {
-				if ( ( m == 0 ) || ( (sortedA[ m ].upperRegionValue - sample ) <= ( sortedA[ m ].upperRegionValue - sortedA[ m - 1 ].upperRegionValue) ) ) {
-					return sortedA[ m ].trueIndex;
-				}
-
-				h = m - 1;
-			} else {
-				if ( m == sortedA.Length - 1 ) {
-					return sortedA[ m ].trueIndex;
-				}
-
-				l = m + 1;
-			}
-
 			m = ( l + h ) / 2;
+			if ( ( sample <= A[ m ] ) && ( ( m == 0 ) || ( sample > A[ m - 1 ] ) ) ) {
+				break;
+			} else if ( A[ m ] < sample ) {
+				l = m + 1;
+			} else {
+				h = m - 1;
+			}
 		}
 
-		return -1;
+		if ( A[m] == A[0] ) {
+			return 0;
+		}
+
+		for ( int i = m; i > 0; i-- ) {
+			if ( A[i] != A[i - 1] ) {
+				return i;
+			}
+		}
+
+		return 0;
 	}
 
-	static void MakeRegionArraySearchable( WeightedRegion[] a ) {
+	static void MakeRegionArraySearchable( float[] a ) {
 		Normalize( a );
 
 		for ( int i = 1; i < a.Length; i++ ) {
-			a[ i ].upperRegionValue += a[ i - 1 ].upperRegionValue;
-		}
-
-		int lastValidIndex = 0;
-
-		for ( int i = a.Length - 1; i > 0; i-- ) {
-			if ( a[i].upperRegionValue != a [ i - 1 ].upperRegionValue ) {
-				lastValidIndex = i;
-				break;
-			}
-		}
-
-		for ( int i = lastValidIndex + 1; i < a.Length; i++ ) {
-			a[ i ].trueIndex = lastValidIndex;
-		}
-
-		for ( int i = lastValidIndex - 1; i > 0; i-- ) {
-			if ( ( a[ i ].upperRegionValue == a[ i - 1 ].upperRegionValue ) || ( a[ i ].upperRegionValue != a[ i + 1 ].upperRegionValue ) ) {
-				a[ i ].trueIndex = a[ i + 1 ].trueIndex;
-			}
+			a[ i ] += a[ i - 1 ];
 		}
 	}
 
-	static void Normalize( WeightedRegion[] A ) {
+	static void Normalize( float[] a ) {
 		float total = 0;
 
-		for ( int i = 0; i < A.Length; i++ ) {
-			total += A[ i ].upperRegionValue;
+		for ( int i = 0; i < a.Length; i++ ) {
+			total += a[ i ];
 		}
 
 		if ( total <= 0 ) {
 			throw new Exception( "Probabilities out of a given state cannot sum to 0!" );
 		}
 
-		for ( int i = 0; i < A.Length; i++ ) {
-			A [ i ].upperRegionValue /= total;
+		for ( int i = 0; i < a.Length; i++ ) {
+			a [ i ] /= total;
 		}
-	}
-
-	public float GetTransitionProbability( int fromState, int toState ) {
-		if ( toState == 0 ) {
-			return binarySearchPModel[ fromState ][ toState ].upperRegionValue;
-		}
-
-		return binarySearchPModel[ fromState ] [ toState ].upperRegionValue - binarySearchPModel[ fromState ][ toState - 1 ].upperRegionValue;
-	}
-
-	struct WeightedRegion {
-		public int trueIndex;
-		public float upperRegionValue;
 	}
 }
