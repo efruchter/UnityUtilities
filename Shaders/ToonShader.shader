@@ -8,7 +8,7 @@ Shader "Toon/Mobile/Shaded: Single Light" {
 		_MainTex ( "Base (RGB)", 2D ) = "white" {}
 
 		_Ramp ( "Ramp Threshold", Range( 0.01, 1.0 ) ) = 0.5
-		_Smoothing ( "Ramp Falloff", Range( 0.01, 0.5 ) ) = 0.25
+		_Smoothing ( "Ramp Falloff", Range( 0.01, 1.0 ) ) = 0.5
 
 		_HighlightColor ( "Highlight Color", Color ) = ( 1.0, 1.0, 1.0 )
 		_ShadowColor ( "Shadow Color", Color ) = ( 0.0, 0.0, 0.0 )
@@ -31,11 +31,12 @@ Shader "Toon/Mobile/Shaded: Single Light" {
 			half NdotL = dot( s.Normal, lightDir );
 			half diff = NdotL * 0.5 + 0.5;
 			half4 c;
+			half smooth = _Smoothing / 2.0;
 
 			c.rgb = lerp (
 				s.Albedo * _ShadowColor,
 				s.Albedo * _LightColor0.rgb * atten *_HighlightColor,
-				smoothstep( _Ramp - _Smoothing, _Ramp + _Smoothing, diff )
+				smoothstep( _Ramp - smooth, _Ramp + smooth, diff )
 			);
 
 			c.a = s.Alpha;
