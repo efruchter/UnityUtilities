@@ -31,12 +31,12 @@ Shader "Toon/Mobile/Shaded: Single Light" {
 			half NdotL = dot( s.Normal, lightDir );
 			half diff = NdotL * 0.5 + 0.5;
 			half4 c;
-			fixed s = _Smoothing / 2.0;
+			fixed smoothing = _Smoothing / 2.0;
 
 			c.rgb = lerp (
 				s.Albedo * _ShadowColor,
 				s.Albedo * _LightColor0.rgb * atten *_HighlightColor,
-				smoothstep( _Ramp - s, _Ramp + s, diff )
+				smoothstep( _Ramp - smoothing, _Ramp + smoothing, diff )
 			);
 
 			c.a = s.Alpha;
