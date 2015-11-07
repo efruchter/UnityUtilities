@@ -21,8 +21,8 @@ Shader "Toon/Mobile/Shaded: Single Light" {
 		CGPROGRAM
 		#pragma surface surf Ramp
 
-		half _Ramp;
-		half _Smoothing;
+		fixed _Ramp;
+		fixed _Smoothing;
 
 		fixed3 _HighlightColor;
 		fixed3 _ShadowColor;
@@ -31,12 +31,12 @@ Shader "Toon/Mobile/Shaded: Single Light" {
 			half NdotL = dot( s.Normal, lightDir );
 			half diff = NdotL * 0.5 + 0.5;
 			half4 c;
-			half smooth = _Smoothing / 2.0;
+			fixed s = _Smoothing / 2.0;
 
 			c.rgb = lerp (
 				s.Albedo * _ShadowColor,
 				s.Albedo * _LightColor0.rgb * atten *_HighlightColor,
-				smoothstep( _Ramp - smooth, _Ramp + smooth, diff )
+				smoothstep( _Ramp - s, _Ramp + s, diff )
 			);
 
 			c.a = s.Alpha;
