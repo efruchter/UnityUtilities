@@ -30,8 +30,8 @@ Shader "Toon/Mobile/Shaded: Single Light" {
 		half4 LightingRamp( SurfaceOutput s, half3 lightDir, half atten ) {
 			half NdotL = dot( s.Normal, lightDir );
 			half diff = NdotL * 0.5 + 0.5;
-			half4 c;
 			fixed smoothing = _Smoothing / 2.0;
+			fixed4 c;
 
 			c.rgb = lerp (
 				s.Albedo * _ShadowColor,
