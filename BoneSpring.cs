@@ -221,15 +221,15 @@ public class BoneSpringEditor : Editor
         var spring = target as BoneSpring;
         if (spring.configuration.updateType == BoneSpring.SpringType.FixedPosition)
         {
-            EditorGUILayout.HelpBox("FixedPosition: The transform will translate only. It's initial position on Awake is assumed to be it's goal position.", MessageType.Info);
+            EditorGUILayout.HelpBox("Fixed Position: The transform will translate only. It's initial local position on Awake is assumed to be it's goal position.", MessageType.Info);
         }
         else if (spring.configuration.updateType == BoneSpring.SpringType.FixedRotation)
         {
-            EditorGUILayout.HelpBox("FixedRotation: The transform will rotate only. It's initial rotation on Awake is assumed to be it's goal rotation.", MessageType.Info);
+            EditorGUILayout.HelpBox("Fixed Rotation: The transform will rotate only. It's initial local rotation on Awake is assumed to be it's goal rotation.", MessageType.Info);
         }
         else if (spring.configuration.updateType == BoneSpring.SpringType.AnimatedRotation)
         {
-            EditorGUILayout.HelpBox("FixedRotation: The transform will rotate only. It's goal rotation is assumed to be set every frame by Animator or Ik.", MessageType.Info);
+            EditorGUILayout.HelpBox("Animated Rotation: The transform will rotate only. It's goal rotation is assumed to be set every frame by Animator or Ik.", MessageType.Info);
         }
 
         base.OnInspectorGUI();
