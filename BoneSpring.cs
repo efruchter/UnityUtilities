@@ -190,16 +190,16 @@ namespace Kazoo.Physics
             [Tooltip("Mass of particle. Leave this 1 unless you know what you're doing.")]
             public float mass = 1;
             [Tooltip("Distance-based spring force.")]
-            public float springStrength = 1500f;
+            public float springStrength = 1000f;
             [Range(0, 1), Tooltip("How much velocity should be retained each frame.")]
-            public float bounceStrength = 0.85f;
+            public float bounceStrength = 0.5f;
             public Vector3 gravityForce = new Vector3(0, 0, 0);
 
             [Header("Constraints")]
             [Tooltip("How far off target we can go.")]
-            public float maxSpringDistance = 1f;
+            public float maxSpringDistance = 100f;
             [Range(0, 360)]
-            public float maxRotationAngleDegrees = 30f;
+            public float maxRotationAngleDegrees = 360f;
 
             [Range(0, 1)]
             public float weight = 1;
