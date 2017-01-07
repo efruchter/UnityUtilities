@@ -8,7 +8,7 @@ using UnityEditor;
 namespace Kazoo.Physics
 {
     /// <summary>
-    /// Apply a spring force to a transform. Useful for adding secondary motion to bones. Can be used with animated characters, but can be used on any transform.
+    /// Apply a spring force to a transform. Useful for adding secondary motion to bones. Useful for animated characters, but can also be used on any transform.
     /// </summary>
     public class BoneSpring : MonoBehaviour
     {
