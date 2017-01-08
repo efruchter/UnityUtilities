@@ -23,6 +23,7 @@ namespace Kazoo.Animation
         [Header("Configure Eyes")]
         public RandomSphereNoise noise = new RandomSphereNoise();
         public float targetLerpSpeed = 5f;
+        [Range(0, 360)]
         public float limitInDegrees = 90f;
 
         [Header("Configure Blink Trigger")]
