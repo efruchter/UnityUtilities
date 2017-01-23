@@ -40,7 +40,7 @@ public class TransformLerper : MonoBehaviour
         public Transform source, dest;
     }
 
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     public void Editor_MapBones()
     {
         Dictionary<string, Transform> sources = new Dictionary<string, Transform>();
@@ -61,7 +61,7 @@ public class TransformLerper : MonoBehaviour
             .Select(boneName => new Mapping() { source = sources[boneName], dest = destinations[boneName] })
             .ToArray();
     }
-    #endif
+#endif
 }
 
 #if UNITY_EDITOR
