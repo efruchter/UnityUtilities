@@ -157,7 +157,7 @@ namespace Kazoo.Messaging
             buffer.TrimExcess();
         }
 
-        private void TrimMessageBuffer()
+        void TrimMessageBuffer()
         {
             Assert.IsTrue(maxBufferLength >= 0, "Buffer Length should be non-negative.");
             while (buffer.Count > maxBufferLength)
@@ -224,7 +224,7 @@ namespace Kazoo.Messaging
             }
         }
 
-        private static void Empty(T message)
+        static void Empty(T message)
         {
 
         }
