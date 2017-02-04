@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using System;
 using UnityEngine.Assertions;
@@ -13,16 +13,16 @@ namespace Kazoo.Messaging
     public static class MessageBus
     {
         private static MessageBusBehaviour _globalBusBehaviour;
-        private static bool _inited;
+        private static bool _globalBusBehaviourInitialized;
 
         private static void InitGlobalBus()
         {
-            if (_inited)
+            if (_globalBusBehaviourInitialized)
             {
                 return;
             }
 
-            _inited = true;
+            _globalBusBehaviourInitialized = true;
             _globalBusBehaviour = new GameObject("[Global MessageBus]").AddComponent<MessageBusBehaviour>();
             Object.DontDestroyOnLoad(_globalBusBehaviour.gameObject);
         }
