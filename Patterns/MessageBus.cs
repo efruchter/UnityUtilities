@@ -1,24 +1,30 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using System;
 using UnityEngine.Assertions;
+using Object = UnityEngine.Object;
 
 namespace Kazoo.Messaging
 {
     /// <summary>
-    /// A simple message bus for implementing an Observer pattern. Call GetBus() to access the global bus,
+    /// A message bus for implementing an Observer pattern. Call GetBus() to access the global bus,
     /// or GetBus(GameObject) to attach a bus to a gameobject.
     /// </summary>
     public static class MessageBus
     {
-        static LocalMessageBus globalBus;
+        private static MessageBusBehaviour _globalBusBehaviour;
+        private static bool _inited;
 
-        static MessageBus()
+        private static void InitGlobalBus()
         {
-            globalBus = new GameObject("[Global MessageBus]").AddComponent<LocalMessageBus>();
-            Assert.AreNotEqual(globalBus, null, "Creation of an object for the Global MessageBus has failed.");
-            MonoBehaviour.DontDestroyOnLoad(globalBus.gameObject);
+            if (_inited)
+            {
+                return;
+            }
+
+            _inited = true;
+            _globalBusBehaviour = new GameObject("[Global MessageBus]").AddComponent<MessageBusBehaviour>();
+            Object.DontDestroyOnLoad(_globalBusBehaviour.gameObject);
         }
 
         /// <summary>
@@ -28,14 +34,16 @@ namespace Kazoo.Messaging
         /// <returns></returns>
         public static IBus<T> GetBus<T>()
         {
-            if (globalBus == null)
-            {
-                return new DummyBusImpl<T>();
-            }
-
-            return globalBus.GetBus<T>();
+            InitGlobalBus();
+            return _globalBusBehaviour != null ? _globalBusBehaviour.GetBus<T>() : new DummyBusImpl<T>();
         }
 
+        /// <summary>
+        /// Get the bus attached to a GameObject, or create one.
+        /// </summary>
+        /// <typeparam name="T">The Message type</typeparam>
+        /// <param name="go">Gameobject that the bus lives on.</param>
+        /// <returns>If the object is alive, a valid bus. If the object is dead, a dummy bus.</returns>
         public static IBus<T> GetBus<T>(GameObject go)
         {
             if (go == null)
@@ -43,11 +51,7 @@ namespace Kazoo.Messaging
                 return new DummyBusImpl<T>();
             }
 
-            LocalMessageBus localBus = go.GetComponent<LocalMessageBus>();
-            if (localBus == null)
-            {
-                localBus = go.AddComponent<LocalMessageBus>();
-            }
+            var localBus = go.GetComponent<MessageBusBehaviour>() ?? go.AddComponent<MessageBusBehaviour>();
 
             return localBus.GetBus<T>();
         }
@@ -56,21 +60,23 @@ namespace Kazoo.Messaging
     /// <summary>
     /// Component for linking a bus with a GameObject's lifecycle.
     /// </summary>
-    public class LocalMessageBus : MonoBehaviour
+    public class MessageBusBehaviour : MonoBehaviour
     {
-        Dictionary<Type, object> busses = new Dictionary<Type, object>();
+        private readonly Dictionary<Type, object> _busses = new Dictionary<Type, object>();
 
         public IBus<T> GetBus<T>()
         {
             var key = typeof(T);
+
             object o;
-            if (busses.TryGetValue(key, out o))
+            if (_busses.TryGetValue(key, out o))
             {
+                Assert.IsTrue(o is IBus<T>, "Retrieved IBus was not a valid type in MessageBusBehaviour.GetBus. Fatal.");
                 return o as IBus<T>;
             }
 
-            IBus<T> bus = new BusImpl<T>();
-            busses[key] = bus;
+            var bus = new DelegateBusImpl<T>();
+            _busses[key] = bus;
             return bus;
         }
     }
@@ -80,13 +86,13 @@ namespace Kazoo.Messaging
         /// <summary>
         /// The amount of buffered messages. 1 by default.
         /// </summary>
-        int maxBufferLength { get; }
+        int GetMessageBufferLength();
 
         /// <summary>
-        /// Set the length of the message buffer.
+        /// Set how many Buffered messages are stored.
         /// </summary>
         /// <param name="length"></param>
-        void SetMaxBufferLength(int length);
+        void SetMessageBufferLength(int length);
 
         /// <summary>
         /// Subscribe to future messages. If any buffered messages exist, recieve them instantly.
@@ -95,7 +101,7 @@ namespace Kazoo.Messaging
         void Subscribe(Action<T> function);
 
         /// <summary>
-        /// Subscribe to the next message.
+        /// Subscribe to the next message only.
         /// </summary>
         /// <param name="function"></param>
         void SubscribeOnce(Action<T> function);
@@ -131,46 +137,46 @@ namespace Kazoo.Messaging
         /// <summary>
         /// Amount of subscribers.
         /// </summary>
-        int ListenerCount { get; }
+        int GetListenerCount();
     }
 
     /// <summary>
-    /// Basic bus backed by an array queue for buffered messages and delegates for subscribers.
+    /// Message bus backed by an array queue for buffered messages and delegates for subscribers.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class BusImpl<T> : IBus<T>
+    public class DelegateBusImpl<T> : IBus<T>
     {
-        Action<T> actions = Empty;
-        Action<T> singleAction = Empty;
-        Queue<T> buffer = new Queue<T>(1);
-        public int maxBufferLength { private set; get; }
+        private Action<T> _actions = Empty;
+        private Action<T> _singleAction = Empty;
+        private readonly Queue<T> _messageBuffer = new Queue<T>();
+        private int _maxBufferLength = 1;
 
-        public BusImpl()
+        public int GetMessageBufferLength()
         {
-            maxBufferLength = 1;
+            return _maxBufferLength;
         }
 
-        public virtual void SetMaxBufferLength(int length)
+        public virtual void SetMessageBufferLength(int length)
         {
-            maxBufferLength = Mathf.Max(0, length);
-            TrimMessageBuffer();
-            buffer.TrimExcess();
+            _maxBufferLength = System.Math.Max(length, 0);
+            TrimMessageBuffer(_maxBufferLength);
+            _messageBuffer.TrimExcess();
         }
 
-        void TrimMessageBuffer()
+        private void TrimMessageBuffer(int bufferSize)
         {
-            Assert.IsTrue(maxBufferLength >= 0, "Buffer Length should be non-negative.");
-            while (buffer.Count > maxBufferLength)
+            bufferSize = System.Math.Max(bufferSize, 0);
+            while (_messageBuffer.Count > bufferSize)
             {
-                buffer.Dequeue();
+                _messageBuffer.Dequeue();
             }
         }
 
         public virtual void Subscribe(Action<T> function)
         {
-            actions += function;
+            _actions += function;
 
-            foreach (var buffered in buffer)
+            foreach (var buffered in _messageBuffer)
             {
                 function(buffered);
             }
@@ -178,53 +184,54 @@ namespace Kazoo.Messaging
 
         public void SubscribeOnce(Action<T> function)
         {
-            singleAction += function;
+            _singleAction += function;
         }
 
         public virtual void Release(Action<T> function)
         {
-            actions -= function;
-            singleAction -= function;
+            _actions -= function;
+            _singleAction -= function;
         }
 
         public void Send(T message)
         {
-            actions(message);
+            _actions(message);
+            _singleAction(message);
 
-            singleAction(message);
-            singleAction = Empty;
+            _singleAction = Empty;
         }
 
         public void SendBuffered(T message)
         {
             Send(message);
 
-            buffer.Enqueue(message);
-            TrimMessageBuffer();
+            if (_maxBufferLength > 0)
+            {
+                // Make room for the new message
+                TrimMessageBuffer(_maxBufferLength - 1);
+                _messageBuffer.Enqueue(message);
+            }
         }
 
         public void ClearMessageBuffer()
         {
-            buffer.Clear();
+            _messageBuffer.Clear();
         }
 
         public void ReleaseAllSubscribers()
         {
-            actions = Empty;
-            singleAction = Empty;
+            _actions = Empty;
+            _singleAction = Empty;
         }
 
-        public int ListenerCount
+        public int GetListenerCount()
         {
-            get
-            {
-                // -1 for each list because the Empty function forms the starting delegate on each.
-                return actions.GetInvocationList().Length - 1
-                    + singleAction.GetInvocationList().Length - 1;
-            }
+            // -1 for each list because the of Empty functions.
+            return _actions.GetInvocationList().Length - 1
+                + _singleAction.GetInvocationList().Length - 1;
         }
 
-        static void Empty(T message)
+        private static void Empty(T message)
         {
 
         }
@@ -236,20 +243,9 @@ namespace Kazoo.Messaging
     /// <typeparam name="T"></typeparam>
     public class DummyBusImpl<T> : IBus<T>
     {
-        public int ListenerCount
+        public int GetListenerCount()
         {
-            get
-            {
-                return 0;
-            }
-        }
-
-        public int maxBufferLength
-        {
-            get
-            {
-                return 0;
-            }
+            return 0;
         }
 
         public void ClearMessageBuffer()
@@ -272,7 +268,7 @@ namespace Kazoo.Messaging
         {
         }
 
-        public void SetMaxBufferLength(int length)
+        public void SetMessageBufferLength(int length)
         {
         }
 
@@ -282,6 +278,11 @@ namespace Kazoo.Messaging
 
         public void SubscribeOnce(Action<T> function)
         {
+        }
+
+        public int GetMessageBufferLength()
+        {
+            return 0;
         }
     }
 }
