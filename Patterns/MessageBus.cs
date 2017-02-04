@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.Collections;
 using UnityEngine.Assertions;
 using Object = UnityEngine.Object;
 
@@ -159,17 +160,11 @@ namespace Kazoo.Messaging
         public virtual void SetMessageBufferLength(int length)
         {
             _maxBufferLength = System.Math.Max(length, 0);
-            TrimMessageBuffer(_maxBufferLength);
-            _messageBuffer.TrimExcess();
-        }
-
-        private void TrimMessageBuffer(int bufferSize)
-        {
-            bufferSize = System.Math.Max(bufferSize, 0);
-            while (_messageBuffer.Count > bufferSize)
+            while (_messageBuffer.Count > _maxBufferLength)
             {
                 _messageBuffer.Dequeue();
             }
+            _messageBuffer.TrimExcess();
         }
 
         public virtual void Subscribe(Action<T> function)
@@ -207,8 +202,10 @@ namespace Kazoo.Messaging
 
             if (_maxBufferLength > 0)
             {
-                // Make room for the new message
-                TrimMessageBuffer(_maxBufferLength - 1);
+                if (_messageBuffer.Count == _maxBufferLength)
+                {
+                    _messageBuffer.Dequeue();
+                }
                 _messageBuffer.Enqueue(message);
             }
         }
@@ -283,6 +280,63 @@ namespace Kazoo.Messaging
         public int GetMessageBufferLength()
         {
             return 0;
+        }
+    }
+
+    public static class MessageBusTests
+    {
+        public static IEnumerator Test1()
+        {
+            yield return null;
+            int c = 0;
+            MessageBus.GetBus<int>().Subscribe((i) => { c += i; });
+
+            MessageBus.GetBus<int>().Send(1);
+            Assert.AreEqual(c, 1, "Send does not send properly.");
+
+            c = 3;
+            MessageBus.GetBus<int>().SendBuffered(2);
+            Assert.AreEqual(c, 5, "Send Buffered does not send properly.");
+
+            var busCache = MessageBus.GetBus<int>();
+            c = 0;
+            busCache.Subscribe((i) => { c += i; });
+            Assert.AreEqual(c, 2, "Send Buffered does not send to future subscribers properly.");
+
+            GameObject go = new GameObject("test");
+
+            MessageBus.GetBus<int>(go).Send(8);
+            Assert.AreEqual(c, 2, "Local busses leak into Global Bus.");
+
+            int d = 0;
+            MessageBus.GetBus<int>(go).SubscribeOnce((i) => { d += i; });
+            MessageBus.GetBus<int>(go).Send(1);
+            MessageBus.GetBus<int>(go).Send(1);
+            Assert.AreEqual(d, 1, "Subscribe Once should only receive one message before Releasing itself.");
+
+            yield return null;
+            Object.Destroy(go);
+            yield return null;
+
+            d = 0;
+
+            MessageBus.GetBus<int>(go).Subscribe((i) => { d += i; });
+            MessageBus.GetBus<int>(go).Send(1);
+
+            Assert.AreEqual(go, null, "Deleted gameobject should be null.");
+            Assert.AreEqual(d, 0, "Getting the bus of a null object should return a dummy bus.");
+
+            busCache.SendBuffered(76);
+            busCache.ClearMessageBuffer();
+
+            c = 0;
+
+            busCache.Subscribe((i) => { c += i; });
+            Assert.AreEqual(c, 0, "Clear Message Buffer didn't clear.");
+
+            busCache.ReleaseAllSubscribers();
+            busCache.Send(9);
+            Assert.AreEqual(c, 0, "Release all subscriber Buffer didn't clear.");
         }
     }
 }
