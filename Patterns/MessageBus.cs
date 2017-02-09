@@ -4,12 +4,13 @@ using System;
 using System.Collections;
 using UnityEngine.Assertions;
 using Object = UnityEngine.Object;
+// ReSharper disable DelegateSubtraction
 
-namespace Kazoo.Messaging
+namespace Patterns.Observer
 {
     /// <summary>
     /// A message bus for implementing an Observer pattern. Call GetBus() to access the global bus,
-    /// or GetBus(GameObject) to attach a bus to a gameobject.
+    /// or GetBus(GameObject) to use a bus on a gameobject.
     /// </summary>
     public static class MessageBus
     {
@@ -18,6 +19,8 @@ namespace Kazoo.Messaging
 
         private static void InitGlobalBus()
         {
+            Assert.IsTrue(Application.isPlaying, "Global MessageBus cannot be used unless the game is running.");
+
             if (_globalBusBehaviourInitialized)
             {
                 return;
@@ -35,6 +38,11 @@ namespace Kazoo.Messaging
         /// <returns></returns>
         public static IBus<T> GetBus<T>()
         {
+			if (!Application.isPlaying)
+			{
+				return new DummyBusImpl<T>();
+			}
+			
             InitGlobalBus();
             return _globalBusBehaviour != null ? _globalBusBehaviour.GetBus<T>() : new DummyBusImpl<T>();
         }
@@ -52,7 +60,7 @@ namespace Kazoo.Messaging
                 return new DummyBusImpl<T>();
             }
 
-            var localBus = go.GetComponent<MessageBusBehaviour>() ?? go.AddComponent<MessageBusBehaviour>();
+            MessageBusBehaviour localBus = go.GetComponent<MessageBusBehaviour>() ?? go.AddComponent<MessageBusBehaviour>();
 
             return localBus.GetBus<T>();
         }
@@ -67,7 +75,7 @@ namespace Kazoo.Messaging
 
         public IBus<T> GetBus<T>()
         {
-            var key = typeof(T);
+            Type key = typeof(T);
 
             object o;
             if (_busses.TryGetValue(key, out o))
@@ -76,7 +84,7 @@ namespace Kazoo.Messaging
                 return o as IBus<T>;
             }
 
-            var bus = new DelegateBusImpl<T>();
+            DelegateBusImpl<T> bus = new DelegateBusImpl<T>();
             _busses[key] = bus;
             return bus;
         }
@@ -159,7 +167,7 @@ namespace Kazoo.Messaging
 
         public virtual void SetMessageBufferLength(int length)
         {
-            _maxBufferLength = System.Math.Max(length, 0);
+            _maxBufferLength = Math.Max(length, 0);
             while (_messageBuffer.Count > _maxBufferLength)
             {
                 _messageBuffer.Dequeue();
@@ -169,9 +177,11 @@ namespace Kazoo.Messaging
 
         public virtual void Subscribe(Action<T> function)
         {
+            Assert.IsNotNull(_actions);
+
             _actions += function;
 
-            foreach (var buffered in _messageBuffer)
+            foreach (T buffered in _messageBuffer)
             {
                 function(buffered);
             }
@@ -179,17 +189,25 @@ namespace Kazoo.Messaging
 
         public void SubscribeOnce(Action<T> function)
         {
+            Assert.IsNotNull(_singleAction);
+
             _singleAction += function;
         }
 
         public virtual void Release(Action<T> function)
         {
+            Assert.IsNotNull(_actions);
+            Assert.IsNotNull(_singleAction);
+
             _actions -= function;
             _singleAction -= function;
         }
 
         public void Send(T message)
         {
+            Assert.IsNotNull(_actions);
+            Assert.IsNotNull(_singleAction);
+
             _actions(message);
             _singleAction(message);
 
@@ -200,14 +218,17 @@ namespace Kazoo.Messaging
         {
             Send(message);
 
-            if (_maxBufferLength > 0)
+            if (_maxBufferLength <= 0)
             {
-                if (_messageBuffer.Count == _maxBufferLength)
-                {
-                    _messageBuffer.Dequeue();
-                }
-                _messageBuffer.Enqueue(message);
+                return;
             }
+
+            if (_messageBuffer.Count == _maxBufferLength)
+            {
+                _messageBuffer.Dequeue();
+            }
+
+            _messageBuffer.Enqueue(message);
         }
 
         public void ClearMessageBuffer()
@@ -217,12 +238,18 @@ namespace Kazoo.Messaging
 
         public void ReleaseAllSubscribers()
         {
+            Assert.IsNotNull(_actions);
+            Assert.IsNotNull(_singleAction);
+
             _actions = Empty;
             _singleAction = Empty;
         }
 
         public int GetListenerCount()
         {
+            Assert.IsNotNull(_actions);
+            Assert.IsNotNull(_singleAction);
+
             // -1 for each list because the of Empty functions.
             return _actions.GetInvocationList().Length - 1
                 + _singleAction.GetInvocationList().Length - 1;
@@ -288,55 +315,55 @@ namespace Kazoo.Messaging
         public static IEnumerator Test1()
         {
             yield return null;
-            int c = 0;
-            MessageBus.GetBus<int>().Subscribe((i) => { c += i; });
+            int[] c = {0};
+            MessageBus.GetBus<int>().Subscribe((i) => { c[0] += i; });
 
             MessageBus.GetBus<int>().Send(1);
-            Assert.AreEqual(c, 1, "Send does not send properly.");
+            Assert.AreEqual(c[0], 1, "Send does not send properly.");
 
-            c = 3;
+            c[0] = 3;
             MessageBus.GetBus<int>().SendBuffered(2);
-            Assert.AreEqual(c, 5, "Send Buffered does not send properly.");
+            Assert.AreEqual(c[0], 5, "Send Buffered does not send properly.");
 
-            var busCache = MessageBus.GetBus<int>();
-            c = 0;
-            busCache.Subscribe((i) => { c += i; });
-            Assert.AreEqual(c, 2, "Send Buffered does not send to future subscribers properly.");
+            IBus<int> busCache = MessageBus.GetBus<int>();
+            c[0] = 0;
+            busCache.Subscribe((i) => { c[0] += i; });
+            Assert.AreEqual(c[0], 2, "Send Buffered does not send to future subscribers properly.");
 
             GameObject go = new GameObject("test");
 
             MessageBus.GetBus<int>(go).Send(8);
-            Assert.AreEqual(c, 2, "Local busses leak into Global Bus.");
+            Assert.AreEqual(c[0], 2, "Local busses leak into Global Bus.");
 
-            int d = 0;
-            MessageBus.GetBus<int>(go).SubscribeOnce((i) => { d += i; });
+            int[] d = {0};
+            MessageBus.GetBus<int>(go).SubscribeOnce((i) => { d[0] += i; });
             MessageBus.GetBus<int>(go).Send(1);
             MessageBus.GetBus<int>(go).Send(1);
-            Assert.AreEqual(d, 1, "Subscribe Once should only receive one message before Releasing itself.");
+            Assert.AreEqual(d[0], 1, "Subscribe Once should only receive one message before Releasing itself.");
 
             yield return null;
             Object.Destroy(go);
             yield return null;
 
-            d = 0;
+            d[0] = 0;
 
-            MessageBus.GetBus<int>(go).Subscribe((i) => { d += i; });
+            MessageBus.GetBus<int>(go).Subscribe((i) => { d[0] += i; });
             MessageBus.GetBus<int>(go).Send(1);
 
             Assert.AreEqual(go, null, "Deleted gameobject should be null.");
-            Assert.AreEqual(d, 0, "Getting the bus of a null object should return a dummy bus.");
+            Assert.AreEqual(d[0], 0, "Getting the bus of a null object should return a dummy bus.");
 
             busCache.SendBuffered(76);
             busCache.ClearMessageBuffer();
 
-            c = 0;
+            c[0] = 0;
 
-            busCache.Subscribe((i) => { c += i; });
-            Assert.AreEqual(c, 0, "Clear Message Buffer didn't clear.");
+            busCache.Subscribe((i) => { c[0] += i; });
+            Assert.AreEqual(c[0], 0, "Clear Message Buffer didn't clear.");
 
             busCache.ReleaseAllSubscribers();
             busCache.Send(9);
-            Assert.AreEqual(c, 0, "Release all subscriber Buffer didn't clear.");
+            Assert.AreEqual(c[0], 0, "Release all subscriber Buffer didn't clear.");
         }
     }
 }
