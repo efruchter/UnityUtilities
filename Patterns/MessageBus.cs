@@ -119,7 +119,7 @@ namespace Patterns.Observer
         /// Release yoru subscription.
         /// </summary>
         /// <param name="function"></param>
-        void Release(Action<T> function);
+        void Unsubscribe(Action<T> function);
 
         /// <summary>
         /// Send a message to all subscribers.
@@ -194,7 +194,7 @@ namespace Patterns.Observer
             _singleAction += function;
         }
 
-        public virtual void Release(Action<T> function)
+        public virtual void Unsubscribe(Action<T> function)
         {
             Assert.IsNotNull(_actions);
             Assert.IsNotNull(_singleAction);
@@ -251,8 +251,8 @@ namespace Patterns.Observer
             Assert.IsNotNull(_singleAction);
 
             // -1 for each list because the of Empty functions.
-            return _actions.GetInvocationList().Length - 1
-                + _singleAction.GetInvocationList().Length - 1;
+            return (_actions.GetInvocationList().Length - 1)
+                + (_singleAction.GetInvocationList().Length - 1);
         }
 
         private static void Empty(T message)
@@ -265,7 +265,7 @@ namespace Patterns.Observer
     /// Empty bus implementation.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class DummyBusImpl<T> : IBus<T>
+    public struct DummyBusImpl<T> : IBus<T>
     {
         public int GetListenerCount()
         {
@@ -276,7 +276,7 @@ namespace Patterns.Observer
         {
         }
 
-        public void Release(Action<T> function)
+        public void Unsubscribe(Action<T> function)
         {
         }
 
