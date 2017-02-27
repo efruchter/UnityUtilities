@@ -38,11 +38,11 @@ namespace Patterns.Observer
         /// <returns></returns>
         public static IBus<T> GetBus<T>()
         {
-			if (!Application.isPlaying)
-			{
-				return new DummyBusImpl<T>();
-			}
-			
+            if (!Application.isPlaying)
+            {
+                return new DummyBusImpl<T>();
+            }
+
             InitGlobalBus();
             return _globalBusBehaviour != null ? _globalBusBehaviour.GetBus<T>() : new DummyBusImpl<T>();
         }
@@ -315,7 +315,7 @@ namespace Patterns.Observer
         public static IEnumerator Test1()
         {
             yield return null;
-            int[] c = {0};
+            int[] c = { 0 };
             MessageBus.GetBus<int>().Subscribe((i) => { c[0] += i; });
 
             MessageBus.GetBus<int>().Send(1);
@@ -335,7 +335,7 @@ namespace Patterns.Observer
             MessageBus.GetBus<int>(go).Send(8);
             Assert.AreEqual(c[0], 2, "Local busses leak into Global Bus.");
 
-            int[] d = {0};
+            int[] d = { 0 };
             MessageBus.GetBus<int>(go).SubscribeOnce((i) => { d[0] += i; });
             MessageBus.GetBus<int>(go).Send(1);
             MessageBus.GetBus<int>(go).Send(1);
