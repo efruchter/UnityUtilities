@@ -1,7 +1,9 @@
+using System.Collections.Generic;
+
 /// <summary>
-/// An array-based ring buffer. The internal array can be accessed directly if needed.
+/// An array-based ring buffer. Faster random access than .NET Queue.
 /// </summary>
-public class ArrayRingBuffer<T> : IEnumerable<T> {
+public class ArrayRingBuffer<T> : IEnumerable<T>{
     public readonly T[] array;
     private int startingIndex = 0;
     private int count;
@@ -31,6 +33,12 @@ public class ArrayRingBuffer<T> : IEnumerable<T> {
             count = Capacity;
         }
     }
+
+	public T Last{
+		get{
+			return this [count - 1];
+		}
+	}
 
     private int CalculateIndex(int relativeIndex) {
         if (relativeIndex < 0 || relativeIndex >= Count) {
