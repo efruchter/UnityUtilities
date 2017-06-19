@@ -13,7 +13,7 @@ namespace Kazoo.Diagnostics
     /// Start a session with `FramerateRecorder.BeginSession(config);`
     /// Update a session with `FramerateRecorder.SubmitFrame();`
     /// End a session with `FramerateRecorder.EndAndSaveSession("Comment", "frames.tsv");`
-    ///     or one of itss variants.
+    ///     or one of its variants.
     /// Prior to doing intensive work, call `FramerateRecorder.PardonFrame();`
     /// 
     /// -Eric
