@@ -270,7 +270,6 @@ namespace Kazoo.Diagnostics
                     get { return endSeconds - startSeconds; }
                 }
             }
-
             
             private static float ApproxRollingAverage(float avg, float newSample, int sampleCount)
             {
