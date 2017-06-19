@@ -8,7 +8,7 @@ namespace Kazoo.Diagnostics
 {
     /// <summary>
     /// Track where in a session the framerate drops below a reasonable rate, and
-    /// output the data to a file that excel can plot. Providesmethods for pardoning intensive frames.
+    /// output the data to a file that excel can plot. Provides methods for pardoning intensive frames.
     /// 
     /// Start a session with `FramerateRecorder.BeginSession(config);`
     /// Update a session with `FramerateRecorder.SubmitFrame();`
