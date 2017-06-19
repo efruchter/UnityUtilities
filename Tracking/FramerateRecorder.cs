@@ -295,6 +295,6 @@ namespace Kazoo.Diagnostics
         /// <summary>
         /// How many frames should our fps be below the alert to trigger an alert record.
         /// </summary>
-        public int alertTimeMinimumSeconds = 0;
+        public float alertTimeMinimumSeconds = 0;
     }
 }
