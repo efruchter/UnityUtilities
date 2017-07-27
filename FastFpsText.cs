@@ -31,13 +31,20 @@ namespace UI.Custom
 
 		protected void LateUpdate()
 		{
+			float correctedUpdateRate = Mathf.Max (updateRate, Time.deltaTime);
+			
+			if (correctedUpdateRate <= 0)
+			{
+				WriteFps (0);
+			}
+			
 			updateAccumulator += Time.deltaTime;
 			framesElapsed++;
 
-			if (updateAccumulator >= updateRate)
+			if (updateAccumulator >= correctedUpdateRate)
 			{
 				WriteFps (framesElapsed / updateAccumulator);
-				updateAccumulator -= updateRate;
+				updateAccumulator -= correctedUpdateRate;
 				framesElapsed = 0;
 			}
 		}
