@@ -69,7 +69,7 @@ namespace kazoo
 			{
 				float x = t / time;
 				// Dampened sin wave bounce.
-				float tValue = ((Mathf.Sin((x * x * 10f) + (-Mathf.PI / 2f)) + 1f) * (3.0f / 4.0f)) * (1f - (x * x)) + x;
+				float tValue = ((Mathf.Sin((x * x * bounceFrequency) + (-Mathf.PI / 2f)) + 1f) * bounceAmplitude) * (1f - (x * x)) + x;
 				onUpdate(Mathf.LerpUnclamped(startValue, endValue, tValue));
 				yield return null;
 				t += Time.deltaTime;
