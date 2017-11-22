@@ -1,4 +1,4 @@
-public class static CameraUtility
+public static class CameraUtility
 {
   // Generate a projection matrix such that the near clip plane is aligned with an arbitrary transform.
   protected static Matrix4x4 GetObliqueMatrix(this Camera inPortalCamera, Transform inClipPlane)
