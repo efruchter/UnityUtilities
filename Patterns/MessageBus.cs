@@ -3,11 +3,15 @@ using UnityEngine;
 using System;
 using System.Collections;
 using UnityEngine.Assertions;
-using Object = UnityEngine.Object;
 // ReSharper disable DelegateSubtraction
 
 namespace Patterns.Observer
 {
+    public interface IMessageReceiver<in T>
+    {
+        void OnMessageReceived(T message);
+    }
+
     /// <summary>
     /// A message bus for implementing an Observer pattern. Call GetBus() to access the global bus,
     /// or GetBus(GameObject) to use a bus on a gameobject.
@@ -28,7 +32,7 @@ namespace Patterns.Observer
 
             _globalBusBehaviourInitialized = true;
             _globalBusBehaviour = new GameObject("[Global MessageBus]").AddComponent<MessageBusBehaviour>();
-            Object.DontDestroyOnLoad(_globalBusBehaviour.gameObject);
+            UnityEngine.Object.DontDestroyOnLoad(_globalBusBehaviour.gameObject);
         }
 
         /// <summary>
@@ -60,7 +64,7 @@ namespace Patterns.Observer
                 return new DummyBusImpl<T>();
             }
 
-            MessageBusBehaviour localBus = go.GetComponent<MessageBusBehaviour>() ?? go.AddComponent<MessageBusBehaviour>();
+            var localBus = go.GetComponent<MessageBusBehaviour>() ?? go.AddComponent<MessageBusBehaviour>();
 
             return localBus.GetBus<T>();
         }
@@ -75,7 +79,7 @@ namespace Patterns.Observer
 
         public IBus<T> GetBus<T>()
         {
-            Type key = typeof(T);
+            var key = typeof(T);
 
             object o;
             if (_busses.TryGetValue(key, out o))
@@ -110,16 +114,34 @@ namespace Patterns.Observer
         void Subscribe(Action<T> function);
 
         /// <summary>
+        /// Subscribe to future messages. If any buffered messages exist, recieve them instantly.
+        /// </summary>
+        /// <param name="messageReceiver"></param>
+        void Subscribe(IMessageReceiver<T> messageReceiver);
+
+        /// <summary>
         /// Subscribe to the next message only.
         /// </summary>
         /// <param name="function"></param>
         void SubscribeOnce(Action<T> function);
 
         /// <summary>
-        /// Release yoru subscription.
+        /// Subscribe to the next message only.
+        /// </summary>
+        /// <param name="messageReceiver"></param>
+        void SubscribeOnce(IMessageReceiver<T> messageReceiver);
+
+        /// <summary>
+        /// Release your subscription.
         /// </summary>
         /// <param name="function"></param>
         void Unsubscribe(Action<T> function);
+
+        /// <summary>
+        /// Release your subscription.
+        /// </summary>
+        /// <param name="messageReceiver"></param>
+        void Unsubscribe(IMessageReceiver<T> messageReceiver);
 
         /// <summary>
         /// Send a message to all subscribers.
@@ -155,8 +177,8 @@ namespace Patterns.Observer
     /// <typeparam name="T"></typeparam>
     public class DelegateBusImpl<T> : IBus<T>
     {
-        private Action<T> _actions = Empty;
-        private Action<T> _singleAction = Empty;
+        private event Action<T> _actions = Empty;
+        private event Action<T> _singleAction = Empty;
         private readonly Queue<T> _messageBuffer = new Queue<T>();
         private int _maxBufferLength = 1;
 
@@ -181,7 +203,7 @@ namespace Patterns.Observer
 
             _actions += function;
 
-            foreach (T buffered in _messageBuffer)
+            foreach (var buffered in _messageBuffer)
             {
                 function(buffered);
             }
@@ -259,6 +281,21 @@ namespace Patterns.Observer
         {
 
         }
+
+        public void Subscribe(IMessageReceiver<T> messageReceiver)
+        {
+            Subscribe(messageReceiver.OnMessageReceived);
+        }
+
+        public void SubscribeOnce(IMessageReceiver<T> messageReceiver)
+        {
+            SubscribeOnce(messageReceiver.OnMessageReceived);
+        }
+
+        public void Unsubscribe(IMessageReceiver<T> messageReceiver)
+        {
+            Unsubscribe(messageReceiver.OnMessageReceived);
+        }
     }
 
     /// <summary>
@@ -308,6 +345,18 @@ namespace Patterns.Observer
         {
             return 0;
         }
+
+        public void Subscribe(IMessageReceiver<T> messageReceiver)
+        {
+        }
+
+        public void SubscribeOnce(IMessageReceiver<T> messageReceiver)
+        {
+        }
+
+        public void Unsubscribe(IMessageReceiver<T> messageReceiver)
+        {
+        }
     }
 
     public static class MessageBusTests
@@ -330,7 +379,7 @@ namespace Patterns.Observer
             busCache.Subscribe((i) => { c[0] += i; });
             Assert.AreEqual(c[0], 2, "Send Buffered does not send to future subscribers properly.");
 
-            GameObject go = new GameObject("test");
+            var go = new GameObject("test");
 
             MessageBus.GetBus<int>(go).Send(8);
             Assert.AreEqual(c[0], 2, "Local busses leak into Global Bus.");
@@ -342,7 +391,7 @@ namespace Patterns.Observer
             Assert.AreEqual(d[0], 1, "Subscribe Once should only receive one message before Releasing itself.");
 
             yield return null;
-            Object.Destroy(go);
+            UnityEngine.Object.Destroy(go);
             yield return null;
 
             d[0] = 0;
