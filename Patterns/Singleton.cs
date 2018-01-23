@@ -1,18 +1,19 @@
-using System;
 using UnityEngine.Assertions;
 
 namespace Patterns
 {
 	/// <summary>
-	/// Singleton manager. Provides a warning when trying to double-add or get null singletons.
+	/// Singleton manager.
 	/// </summary>
 	public static class Singleton<T> where T : class
 	{
+		public delegate void SingletonReady(T t);
+
 		private static T _singleton;
-		private static Action<T> _onAdd;
+		private static SingletonReady _onAdd;
 
 		/// <summary>
-		/// O(1) Fetch or add of singleton.
+		/// O(1) Fetch or add a singleton.
 		/// </summary>
 		public static T Instance
 		{
@@ -24,24 +25,24 @@ namespace Patterns
 		{
 			get
 			{
-				return _singleton != null;
+				return _singleton != null
+					&& !_singleton.Equals(null);
 			}
 		}
 
 		/// <summary>
-		/// Get a singleton. Warning if not available.
+		/// Get a singleton.
 		/// </summary>
 		/// <returns>The singleton if available.</returns>
 		public static T GetSingleton()
 		{
-			Assert.IsTrue(Exists, "Singleton does not exist at this moment. Advice: Fetch Singletons with GetSingletonDeferred, or later in the frame.");
 			return _singleton;
 		}
 
 		/// <summary>
 		/// Perform an action as soon as the singleton is available.
 		/// </summary>
-		public static Action<T> InstanceReady
+		public static SingletonReady InstanceReady
 		{
 			set
 			{
@@ -53,9 +54,12 @@ namespace Patterns
 		/// Get a singleton whenever it is available.
 		/// </summary>
 		/// <param name="onAdd">The callback to run when singleton Exists</param>
-		public static void GetSingletonDeferred(Action<T> onAdd)
+		public static void GetSingletonDeferred(SingletonReady onAdd)
 		{
-			Assert.IsNotNull(onAdd, "Callback can not be null.");
+			if (onAdd == null)
+			{
+				return;
+			}
 
 			if (Exists)
 			{
@@ -102,7 +106,7 @@ namespace Patterns
 				return;
 			}
 
-			Assert.IsFalse(!allowReplace && Exists, "Attempting to replace a singleton that already exists.");
+			Assert.IsFalse(!allowReplace && Exists, "Replacing a singleton that already exists. Check the stack trace for more info. If you would like to allow replacement, call AddSingleton and set allowReplace to true.");
 
 			_singleton = singleton;
 			if (_onAdd != null)
