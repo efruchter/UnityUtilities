@@ -22,12 +22,7 @@ namespace ADT
 
         public float GetDuration()
         {
-            if (_records.Count > 0)
-            {
-                return _records[_records.Count - 1].time;
-            }
-
-            return 0;
+            return _records.Count > 0 ? _records[_records.Count - 1].time : 0;
         }
 
         /// <summary>
@@ -37,7 +32,7 @@ namespace ADT
         /// <param name="time"></param>
         public void AddRecord(in T record, in float time)
         {
-            Record rec = new Record
+            var rec = new Record
             {
                 t = record,
                 time  = time
@@ -96,7 +91,8 @@ namespace ADT
 
             if (time <= _records[0].time)
                 return _records[0].t;
-        
+
+            // Binary Search
             int L = 0, R = _records.Count - 2;
             while (L <= R)
             {
