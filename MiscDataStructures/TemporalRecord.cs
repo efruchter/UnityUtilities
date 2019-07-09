@@ -1,11 +1,19 @@
 using System.Collections.Generic;
-using Unity.Mathematics;
-using UnityEngine;
 
 namespace ADT
 {
     public class TemporalRecord<T>
     {
+        List<Record> _records;
+
+        public TemporalRecord(int initialCapacity)
+        {
+            _records = new List<Record>(initialCapacity);
+        }
+        
+
+        public TemporalRecord() : this(0) { }
+
         public struct Record
         {
             public float time;
@@ -21,8 +29,6 @@ namespace ADT
 
             return 0;
         }
-
-        List<Record> _records = new List<Record>();
 
         /// <summary>
         /// Add a record. Inserting records is nlogn, try to only add records to the end.
@@ -77,9 +83,7 @@ namespace ADT
         public T GetBlendedVal(in float time, in LerpingFunction lerpingFunction)
         {
             if (lerpingFunction == null)
-            {
                 return GetNearestVal(time);
-            }
 
             if (_records.Count < 1)
                 return default;
@@ -100,7 +104,15 @@ namespace ADT
 
                 if (_records[M].time <= time && _records[M + 1].time >= time)
                 {
-                    float blend = BurstMath.Map(time, math.float2(_records[M].time, _records[M + 1].time), math.float2(0, 1));
+                    float remap (float val, float lowInterval, float highInterval)
+                    {
+                        if (lowInterval == highInterval)
+                            return lowInterval;
+
+                        return (val - lowInterval) / (highInterval - lowInterval);
+                    }
+
+                    float blend = remap(time, _records[M].time, _records[M + 1].time);
                     return lerpingFunction(_records[M].t, _records[M + 1].t, blend);
                 }
 
